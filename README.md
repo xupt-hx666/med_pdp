@@ -3,6 +3,8 @@
 1.换用医疗数据集medinist,图像的数据处理跟矩阵的处理方式不同，这里在数据处理时做了修改。
 2.新增ou98加解密模块来实现除paillier以外的同态加密（根据想要使用的算法模块自己选择）
 
+这里依然保留个性化部分以期实现医疗场景的数据异构问题
+
 这里附上医疗场景的paillier模拟实验运行结果
 (pytorch_gpu) C:\Users\coolboy\Desktop\deep_study\Medmodel_cry>python main.py
 Using downloaded and verified file: C:\Users\coolboy\.medmnist\pneumoniamnist.npz
