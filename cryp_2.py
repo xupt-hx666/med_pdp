@@ -9,11 +9,11 @@ args = args_parser()
 
 
 class OU98Encryptor:
-    def __init__(self, key_size=512):
+    def __init__(self, key_size=64):
         p = getPrime(key_size)
         q = getPrime(key_size)
         self.n = p * q
-        self.g = self.n + 1  # 固定生成元
+        self.g = self.n + 1
         self.public_key = (self.n, self.g)
         self.private_key = (p, q)
         self.lambda_val = (p - 1) * (q - 1)

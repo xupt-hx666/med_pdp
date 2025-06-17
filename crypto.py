@@ -8,7 +8,7 @@ args = args_parser()
 
 
 class PaillierEncryptor:
-    def __init__(self, key_size=1024):
+    def __init__(self, key_size=128):
         self.public_key, self.private_key = paillier.generate_paillier_keypair(n_length=key_size)
 
     def encrypt_tensor(self, tensor, progress=True):

@@ -1,10 +1,12 @@
+from attack import model_inversion_attack
 from model import MedModel
 from args import args_parser
 from client import train, validate_personalization, validate
 import torch.nn as nn
-# from crypto import PaillierEncryptor
-from cryp_2 import OU98Encryptor
+from crypto import PaillierEncryptor
+# from cryp_2 import OU98Encryptor
 import numpy as np
+import torch
 
 args = args_parser()
 
@@ -12,8 +14,8 @@ args = args_parser()
 class FedPer:
     def __init__(self):
         self.args = args
-        # self.encryptor = PaillierEncryptor()
-        self.encryptor = OU98Encryptor()
+        self.encryptor = PaillierEncryptor()
+        # self.encryptor = OU98Encryptor()
         self.global_base = self.base_layers = nn.Sequential(
             nn.Linear(args.input_dim, 128),
             nn.ReLU(),
@@ -41,20 +43,20 @@ class FedPer:
 
             # 同态加法聚合
             # paillier
-            # summed = []
-            # for i in range(len(encrypted_arrays[0])):
-            #     total = encrypted_arrays[0][i]
-            #     for arr in encrypted_arrays[1:]:
-            #         total += arr[i]
-            #     summed.append(total)
-
-            # ou98
             summed = []
             for i in range(len(encrypted_arrays[0])):
                 total = encrypted_arrays[0][i]
                 for arr in encrypted_arrays[1:]:
-                    total = (total * arr[i]) % (self.encryptor.n**2)
+                    total += arr[i]
                 summed.append(total)
+
+            # ou98
+            # summed = []
+            # for i in range(len(encrypted_arrays[0])):
+            #     total = encrypted_arrays[0][i]
+            #     for arr in encrypted_arrays[1:]:
+            #         total = (total * arr[i]) % (self.encryptor.n**2)
+            #     summed.append(total)
 
             # 解密并还原
             decrypted_tensor = self.encryptor.decrypt_tensor({
@@ -92,11 +94,33 @@ class FedPer:
             print(f"Client {idx} Val Acc: {acc:.2f}%")
         print(f"Round Average Val Acc: {sum(val_accs) / len(val_accs):.2f}%")
 
+    def get_personal_params(self):
+        """获取所有客户端的个性化层参数"""
+        personal_params = []
+        for model in self.client_models:
+            params = []
+            for param in model.personal_layers.parameters():
+                params.append(param.data.cpu().numpy())
+            personal_params.append(np.concatenate([p.flatten() for p in params]))
+        print(np.array(personal_params))
+
     def run(self):
         for r in range(args.r):
             print(f"\n=== Round {r + 1}/{args.r} ===")
             self.server_round(r)
 
+            print("\n=== 启动模型反演攻击测试 ===")
+            target_client_id = 0
+            target_label = 1
+            fake_image = model_inversion_attack(
+                self.client_models[target_client_id],
+                target_label,
+                self.args,
+                attack_epochs=200
+            )
         print("个性层差异")
         print("=======================")
         validate_personalization(self.client_models)
+
+        torch.save(self.client_models[0].state_dict(), 'pneumonia_model.pth')
+        print("模型已保存为 pneumonia_model.pth")
